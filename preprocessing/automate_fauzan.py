@@ -16,11 +16,11 @@ class HeartDataPreprocessor:
             'Sex_encoded', 'ChestPainType_encoded', 'RestingECG_encoded',
             'ExerciseAngina_encoded', 'ST_Slope_encoded'
         ]
-        
+
     def load(self, filepath):
         print(f"📥 Loading dataset from: {filepath}")
         return pd.read_csv(filepath)
-    
+
     def inspect(self, df):
         print("📊 Dataset Preview")
         print(df.head())
@@ -28,12 +28,11 @@ class HeartDataPreprocessor:
         print(df.isnull().sum())
         print("\n🎯 Target Distribution:")
         print(df['HeartDisease'].value_counts())
-    
+
     def fill_missing(self, df):
         print("🧹 Handling Missing Data...")
         df_clean = df.copy()
         numeric_cols = ['Age', 'RestingBP', 'Cholesterol', 'MaxHR', 'Oldpeak']
-
         for col in numeric_cols:
             if df_clean[col].isnull().sum():
                 median = df_clean[col].median()
@@ -46,20 +45,18 @@ class HeartDataPreprocessor:
                 mode = df_clean[col].mode()[0]
                 df_clean[col].fillna(mode, inplace=True)
                 print(f"Filled {col} with mode: {mode}")
-
         return df_clean
 
     def encode(self, df):
         print("🔡 Encoding Categorical Columns...")
         df_enc = df.copy()
         cat_cols = ['Sex', 'ChestPainType', 'RestingECG', 'ExerciseAngina', 'ST_Slope']
-
         for col in cat_cols:
             le = LabelEncoder()
             df_enc[col + '_encoded'] = le.fit_transform(df_enc[col])
             self.label_encoders[col] = le
             print(f"{col} → {dict(zip(le.classes_, le.transform(le.classes_)))}")
-        
+
         df_enc['target'] = self.target_encoder.fit_transform(df_enc['HeartDisease'])
         print(f"\nTarget encoding: {dict(zip(self.target_encoder.classes_, self.target_encoder.transform(self.target_encoder.classes_)))}")
         return df_enc
@@ -83,21 +80,23 @@ class HeartDataPreprocessor:
         df_clean = self.fill_missing(df)
         df_encoded = self.encode(df_clean)
         X, y = self.prepare(df_encoded)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state, stratify=y)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=random_state, stratify=y
+        )
         X_train_scaled, X_test_scaled = self.scale(X_train, X_test)
         return X_train_scaled, X_test_scaled, y_train, y_test
 
     def save_all(self, X_train, X_test, y_train, y_test, output_path):
-        print(f"💾 Saving Preprocessed Data to {output_path}")
+        print(f"\n=== SAVING PREPROCESSED DATA TO `{output_path}` ===")
         os.makedirs(output_path, exist_ok=True)
 
-        # Save data
+        # Save CSV
         X_train.to_csv(f"{output_path}/X_train.csv", index=False)
         X_test.to_csv(f"{output_path}/X_test.csv", index=False)
-        y_train.to_csv(f"{output_path}/y_train.csv", index=False, header=["target"])
-        y_test.to_csv(f"{output_path}/y_test.csv", index=False, header=["target"])
+        y_train.to_frame(name="target").to_csv(f"{output_path}/y_train.csv", index=False)
+        y_test.to_frame(name="target").to_csv(f"{output_path}/y_test.csv", index=False)
 
-        # Save objects
+        # Save scalers/encoders
         with open(f"{output_path}/scaler.pkl", "wb") as f:
             pickle.dump(self.scaler, f)
         with open(f"{output_path}/label_encoders.pkl", "wb") as f:
@@ -105,22 +104,22 @@ class HeartDataPreprocessor:
         with open(f"{output_path}/target_encoder.pkl", "wb") as f:
             pickle.dump(self.target_encoder, f)
 
-        # Metadata
+        # Save metadata
         with open(f"{output_path}/feature_info.json", "w") as f:
             json.dump({
                 "features": self.feature_columns,
-                "target_classes": list(self.target_encoder.classes_)
+                "target_classes": [int(c) if isinstance(c, np.integer) else str(c) for c in self.target_encoder.classes_]
             }, f, indent=2)
 
         print("✅ Data & objects saved successfully!")
 
-# Main function
+# Main entry
 if __name__ == "__main__":
     print("❤️ Heart Disease Dataset Preprocessing")
     print("=" * 50)
 
     processor = HeartDataPreprocessor()
-    raw_path = "../heart_raw.csv"  # ← sesuaikan jika perlu
+    raw_path = "../heart_raw.csv"  # karena heart_raw.csv ada di root folder proyek
     output_dir = "./dataset_preprocessing"
 
     try:
@@ -134,4 +133,4 @@ if __name__ == "__main__":
         print(f"   - Classes : {list(processor.target_encoder.classes_)}")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error during preprocessing: {e}")
