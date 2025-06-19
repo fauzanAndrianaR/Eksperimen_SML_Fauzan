@@ -32,7 +32,7 @@ jobs:
       - name: Run data preprocessing
         run: |
           cd preprocessing
-          python automate_*.py
+          python automate_fauzan.py
 
       - name: Verify preprocessing output
         run: |

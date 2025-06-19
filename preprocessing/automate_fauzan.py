@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     processor = HeartDataPreprocessor()
     raw_path = "../heart_raw.csv"  # ← sesuaikan jika perlu
-    output_dir = "./heart_preprocessing"
+    output_dir = "./dataset_preprocessing"
 
     try:
         X_train, X_test, y_train, y_test = processor.process(raw_path)
